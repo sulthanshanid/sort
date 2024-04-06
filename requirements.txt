@@ -1,2 +1,5 @@
-flask
+Flask
+requests
+gunicorn
+gevent 
 pymysql
