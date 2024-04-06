@@ -3,11 +3,11 @@ from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
 
-HOST = 'localhost'
+HOST = 'thetyreshop.co.in'
 PORT = 3306
-DATABASE = 'library'
-USER = 'root'
-PASSWORD = ''
+DATABASE = 'u131501769_library'
+USER = 'muzu04994'
+PASSWORD = 'Shanid@786'
 
 def connect_to_database():
     return pymysql.connect(host=HOST, port=PORT, user=USER, password=PASSWORD, database=DATABASE, cursorclass=pymysql.cursors.DictCursor)
