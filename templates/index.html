@@ -142,128 +142,148 @@ td.not-assigned {
     <script src="https://cdn.jsdelivr.net/gh/mozilla/localForage@master/dist/localforage.js"></script>
     <script>
     let reader;
-        let enhancer;
-        let interval;
-        let processing = false;
+    let enhancer;
+    let interval;
+    let processing = false;
 
-        if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.register("sw.js").then(function (registration) {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            }, function (err) {
-                console.log('ServiceWorker registration failed: ', err);
-            }).catch(function (err) {
-                console.log(err);
-            });
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("sw.js").then(function (registration) {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }, function (err) {
+            console.log('ServiceWorker registration failed: ', err);
+        }).catch(function (err) {
+            console.log(err);
+        });
+    }
+
+    window.onload = function() {
+        init();
+    };
+    let scanContext;
+    function startScan(event){
+        scanContext = event.target.closest('form').id;
+        event.preventDefault();
+        if (!enhancer || !reader) {
+            alert("Please wait for the initialization of Dynamsoft Barcode Reader");
+            return;
         }
+        enhancer.open(true);
+    }
 
-        window.onload = function() {
-            init();
+    function stopScan(){
+        stopProcessingLoop();
+        enhancer.close(true);
+    }
+
+    async function init(){
+        reader = await Dynamsoft.DBR.BarcodeScanner.createInstance();
+        await useEAN13Template();
+        enhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance();
+        enhancer.on("played", (playCallbackInfo) => {
+            startProcessingLoop();
+        });
+        await enhancer.setUIElement(Dynamsoft.DCE.CameraEnhancer.defaultUIElementURL);
+        setScanRegion();
+        let container = document.getElementsByClassName("scanner")[0];
+        container.appendChild(enhancer.getUIElement());
+        document.getElementsByClassName("dce-btn-close")[0].onclick = function () {
+            stopScan();
         };
-
-        function startScan(){
-            if (!enhancer || !reader) {
-                alert("Please wait for the initialization of Dynamsoft Barcode Reader");
-                return;
-            }
-            enhancer.open(true);
+Event listener for cupboard selection change
+    document.getElementById("destinationcupboard").addEventListener("change", function() {
+        const selectedCupboardId = this.value;
+        if (selectedCupboardId) {
+            // Fetch rows based on selected cupboard ID
+            fetchRows(selectedCupboardId);
+        } else {
+            // Clear row dropdown if no cupboard is selected
+            document.getElementById("destinationrow").innerHTML = "";
         }
+    });
 
-        function stopScan(){
-            stopProcessingLoop();
-            enhancer.close(true);
+    // Event listener for cupboardid selection change
+    document.getElementById("cupboardid").addEventListener("change", function() {
+        const selectedCupboardId = this.value;
+        if (selectedCupboardId) {
+            // Fetch rows based on selected cupboard ID
+            fetchRows(selectedCupboardId);
+        } else {
+            // Clear row dropdown if no cupboard is selected
+            document.getElementById("rowid").innerHTML = "";
         }
+    });
+    }
 
-        async function init(){
-            reader = await Dynamsoft.DBR.BarcodeScanner.createInstance();
-            await useEAN13Template();
-            enhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance();
-            enhancer.on("played", (playCallbackInfo) => {
-                startProcessingLoop();
-            });
-            await enhancer.setUIElement(Dynamsoft.DCE.CameraEnhancer.defaultUIElementURL);
-            setScanRegion();
-            let container = document.getElementsByClassName("scanner")[0];
-            container.appendChild(enhancer.getUIElement());
-            document.getElementsByClassName("dce-btn-close")[0].onclick = function () {
+    function startProcessingLoop(isBarcode){
+        stopProcessingLoop();
+        interval = setInterval(captureAndDecode,100);
+    }
+
+    function stopProcessingLoop(){
+        if (interval) {
+            clearInterval(interval);
+            interval = undefined;
+        }
+        processing = false;
+    }
+
+    async function captureAndDecode() {
+        if (!enhancer || !reader) {
+            return
+        }
+        if (enhancer.isOpen() === false) {
+            return;
+        }
+        if (processing == true) {
+            return;
+        }
+        processing = true;
+        let frame = enhancer.getFrame();
+        if (frame) {
+            let results = await reader.decode(frame);
+            if (results.length > 0) {
+                const result = results[0];
+                if (scanContext === 'searchForm') {
+                    handleScannedText(result.barcodeText);
+                } else {
+                    handleScannedText1(result.barcodeText);
+                }
                 stopScan();
-            };
-        }
-
-        function startProcessingLoop(isBarcode){
-            stopProcessingLoop();
-            interval = setInterval(captureAndDecode,100); // read barcodes
-        }
-
-        function stopProcessingLoop(){
-            if (interval) {
-                clearInterval(interval);
-                interval = undefined;
             }
             processing = false;
         }
+    };
 
-        async function captureAndDecode() {
-            if (!enhancer || !reader) {
-                return
-            }
-            if (enhancer.isOpen() === false) {
-                return;
-            }
-            if (processing == true) {
-                return;
-            }
-            processing = true;
-            let frame = enhancer.getFrame();
-            if (frame) {
-                let results = await reader.decode(frame);
-                if (results.length > 0) {
-                    const result = results[0];
-                    handleScannedText(result.barcodeText);
-                    stopScan();
-                }
-                processing = false;
-            }
-        };
+    function setScanRegion(){
+        enhancer.setScanRegion({
+            regionLeft:0,
+            regionTop:25,
+            regionRight:100,
+            regionBottom:55,
+            regionMeasuredByPercentage: 1
+        });
+    }
 
-        function setScanRegion(){
-            enhancer.setScanRegion({
-                regionLeft:0,
-                regionTop:25,
-                regionRight:100,
-                regionBottom:55,
-                regionMeasuredByPercentage: 1
-            });
-        }
-
-        async function useEAN13Template() {
-            await reader.initRuntimeSettingsWithString(`
-            {
-                "FormatSpecification": {
-                    "EnableAddOnCode": 1,
-                    "Name": "defaultFormatParameterForAllBarcodeFormat"
-                },
-                "ImageParameter": {
-                    "BarcodeFormatIds": ["BF_EAN_13"],
-                    "BarcodeFormatIds_2": ["BF2_NULL"],
-                    "ExpectedBarcodesCount": 1,
-                    "FormatSpecificationNameArray": [
-                        "defaultFormatParameterForAllBarcodeFormat"
-                    ],
-                    "Name": "default",
-                    "Timeout": 3000
-                },
-                "Version": "3.0"
-            }`);
-        };
-
-        // Function to handle scanned text
-        function handleScannedText(scannedText) {
-            // Assign the scanned text to the ISBN input field
-            document.getElementById('query').value = scannedText;
-            // Trigger the ISBN lookup function after setting the scanned text
-            
-        }
-           
+    async function useEAN13Template() {
+        await reader.initRuntimeSettingsWithString(`
+        {
+            "FormatSpecification": {
+                "EnableAddOnCode": 1,
+                "Name": "defaultFormatParameterForAllBarcodeFormat"
+            },
+            "ImageParameter": {
+                "BarcodeFormatIds": ["BF_CODE_128","BF_EAN_13"],
+                "BarcodeFormatIds_2": ["BF2_NULL"],
+                "ExpectedBarcodesCount": 1,
+                "FormatSpecificationNameArray": [
+                    "defaultFormatParameterForAllBarcodeFormat"
+                ],
+                "Name": "default",
+                "Timeout": 3000
+            },
+            "Version": "3.0"
+        }`);
+    }
 
     function handleScannedText(scannedText) {
         document.getElementById('query').value = scannedText;
@@ -279,7 +299,7 @@ td.not-assigned {
     function searchBooks(query) {
         fetch(`/search?query=${query}`)
             .then(response => response.json())
-            .hen(data => {
+            .then(data => {
                 displayResults(data.books);
             })
             .catch(error => console.error('Error:', error));
@@ -475,163 +495,4 @@ td.not-assigned {
         const duplicateBarcode = document.getElementById("duplicateBarcode").value.trim();
         const bookID = document.getElementById("bookID").value.trim();
 
-        fetch(`/add_duplicate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                bookID: bookID,
-                barcode: duplicateBarcode
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);
-            } else {
-                alert(data.message);
-                // Search again after adding duplicate
-                searchBooks(document.getElementById("query").value.trim());
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    });
-
-    // Function to fetch row details based on cupboard ID
-
-
-
-// Function to fetch cupboards from the server
-
-
-// Function to fetch rows based on the selected cupboard ID
-function displayBookDetails(book) {
-    document.getElementById("bookTitle").textContent = book.title;
-    document.getElementById("bookISBN").textContent = book.isbn;
-    document.getElementById("bookAuthor").textContent = book.author;
-    document.getElementById("bookPublisher").textContent = book.publisher;
-    document.getElementById("Category").textContent = book.roww_category;
-    document.getElementById("bookCupboardID").textContent = book.cupboard_id + " " + book.cupname;
-    document.getElementById("bookRowNumber").textContent = book.row_number_inside_cupboard + " " + book.rowname;
-    document.getElementById("bookBarcode").textContent = book.barcode;
-    document.getElementById("bookID").value = book.book_id;
-    document.getElementById("bookDetails").style.display = "block";
-
-    const barcodeStatus = book.barcode_status;
-    if (barcodeStatus === 'assigned') {
-        const confirmation = confirm("Barcode is already assigned. Press OK to modify it or Cancel to add a duplicate?");
-        if (confirmation) {
-            document.getElementById("updateForm").style.display = "block";
-            document.getElementById("duplicateForm").style.display = "none";
-        } else {
-            document.getElementById("duplicateForm").style.display = "block";
-            document.getElementById("updateForm").style.display = "none";
-        }
-    } else {
-        document.getElementById("updateForm").style.display = "block";
-        document.getElementById("duplicateForm").style.display = "none";
-    }
-
-    // Select cupboard and row options in dropdown menus
-    fetchCupboards(book.cupboard_id);
-    document.getElementById("destinationcupboard").value = book.cupboard_id;
-    fetchRows(book.cupboard_id, book.row_number_inside_cupboard);
-}
-
-// Function to fetch rows based on the selected cupboard ID and select the row option
-function fetchRows(cupboardId, selectedRowId) {
-    fetch(`/rows?cupboardId=${cupboardId}`)
-        .then(response => response.json())
-        .then(data => {
-            const dropdown = document.getElementById("destinationrow");
-            const rowIdDropdown = document.getElementById("rowid");
-
-            if (dropdown && rowIdDropdown) {
-                dropdown.innerHTML = ""; // Clear previous options
-                rowIdDropdown.innerHTML = ""; // Clear previous options
-
-                data.forEach(row => {
-                    const option = new Option(row.name + ' - ' + row.id, row.id);
-                    const rowIdOption = new Option(row.name + ' - ' + row.id, row.id);
-
-                    if (row.id === selectedRowId) {
-                        option.selected = true; // Select the row option matching destination_row
-                        rowIdOption.selected = true; // Select the row option matching rowid
-                    }
-
-                    dropdown.appendChild(option);
-                    rowIdDropdown.appendChild(rowIdOption);
-                });
-            } else {
-                console.error('One or both dropdowns ("destinationrow" and "rowid") are not available.');
-            }
-        })
-        .catch(error => console.error('Error fetching rows:', error));
-}
-
-
-
-function init() {
-    // Fetch cupboards when the page loads
-
-
-    // Event listener for cupboard selection change
-    document.getElementById("destinationcupboard").addEventListener("change", function() {
-        const selectedCupboardId = this.value;
-        if (selectedCupboardId) {
-            // Fetch rows based on selected cupboard ID
-            fetchRows(selectedCupboardId);
-        } else {
-            // Clear row dropdown if no cupboard is selected
-            document.getElementById("destinationrow").innerHTML = "";
-        }
-    });
-
-    // Event listener for cupboardid selection change
-    document.getElementById("cupboardid").addEventListener("change", function() {
-        const selectedCupboardId = this.value;
-        if (selectedCupboardId) {
-            // Fetch rows based on selected cupboard ID
-            fetchRows(selectedCupboardId);
-        } else {
-            // Clear row dropdown if no cupboard is selected
-            document.getElementById("rowid").innerHTML = "";
-        }
-    });
-}
-init();
-// Function to initialize event listeners and fetch initial data
-function fetchCupboards(selectedRowId) {
-    fetch("/cupboards")
-        .then(response => response.json())
-        .then(data => {
-            // Iterate over each dropdown ID
-            ["destinationcupboard", "cupboardid"].forEach(dropdownId => {
-                const dropdown = document.getElementById(dropdownId);
-                dropdown.innerHTML = ""; // Clear previous options
-                data.forEach(cupboard => {
-                    const option = new Option(cupboard.name + ' - ' + cupboard.id, cupboard.id);
-                    if (cupboard.id === selectedRowId) {
-                        option.selected = true; // Select the row option matching destination_row
-                    }
-                    dropdown.appendChild(option);
-                });
-            });
-
-            // Trigger row request after fetching cupboards
-        })
-        .catch(error => console.error('Error fetching cupboards:', error));
-}
-
-
-
-</script>
-
-
-
-
-
-
-</body>
-</html>
+        fetch(`/add_duplicat. 
