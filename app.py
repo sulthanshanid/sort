@@ -3,10 +3,10 @@ from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
 
-HOST = 'srv1273.hstgr.io'
+HOST = '193.203.184.44'
 PORT = 3306
 DATABASE = 'u131501769_library'
-USER = 'muzu04994'
+USER = 'u131501769_muzu04994'
 PASSWORD = 'Shanid@786'
 
 def connect_to_database():
