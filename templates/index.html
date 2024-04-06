@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+td.assigned {
+    color: green;
+}
+
+td.not-assigned {
+    color: red;
+}
+
+
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-5">Book Search</h1>
+        <form id="searchForm" class="mt-3">
+
+
+            <div class="mb-3">
+               <button class="btn btn-primary" onclick="startScan(event)">Click here to scan barcode</button>
+
+            </div>
+            <div class="mb-3">
+                <label for="query" class="form-label">Search by ISBN, Title, or Barcode:</label>
+                <input type="text" id="query" class="form-control" name="query">
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+            <button type="button" id="addBookBtn" class="btn btn-success ms-2">Add Book</button>
+        </form>
+
+        <div id="searchResults" class="mt-5">
+            <!-- Search results will be displayed here -->
+        </div>
+
+        <div id="bookDetails" style="display: none;" class="mt-5">
+            <h2>Book Details</h2>
+            <p>Title: <span id="bookTitle"></span></p>
+            <p>ISBN: <span id="bookISBN"></span></p>
+            <p>Author: <span id="bookAuthor"></span></p>
+            <p>Publisher: <span id="bookPublisher"></span></p>
+            <p>Category: <span id="Category"></span></p>
+            <p>Cupboard ID: <span id="bookCupboardID"></span></p>
+            <p>Row No: <span id="bookRowNumber"></span></p>
+            <p>Barcode: <span id="bookBarcode"></span></p>
+
+            <form id="updateForm" style="display: none;">
+                <div class="mb-3">
+        <label for="destinationcupboard" class="form-label">New Destination Cupboard:</label>
+        <select id="destinationcupboard" class="form-control" name="destinationcupboard">
+            <option value="" selected>Select Cupboard</option>
+            <!-- Cupboard options will be populated dynamically -->
+        </select>
+    </div>
+    <div class="mb-3">
+        <label for="destinationrow" class="form-label">New Destination Row:</label>
+        <select id="destinationrow" class="form-control" name="destinationrow">
+            <option value="" selected>Select Row</option>
+            <!-- Row options will be populated dynamically -->
+        </select>
+    </div>
+                <div class="mb-3">
+                    <label for="barcode" class="form-label">Barcode:</label>
+                     <button class="btn btn-primary" onclick="startScan(event)">Click here to scan barcode</button>
+
+                    <input type="text" id="barcode" class="form-control" name="barcode">
+                </div>
+                <input type="hidden" id="bookID" name="bookID">
+                <button type="submit" class="btn btn-primary">Modify Current Book</button>
+            </form>
+
+            <form id="duplicateForm" style="display: none;">
+                <div class="mb-3">
+                    <label for="duplicateBarcode" class="form-label">Barcode for Duplicate:</label>
+                     <button class="btn btn-primary" onclick="startScan(event)">Click here to scan barcode</button>
+
+                    <input type="text" id="duplicateBarcode" class="form-control" name="duplicateBarcode">
+                </div>
+                <input type="hidden" id="bookIDForDuplicate" name="bookIDForDuplicate">
+                <button type="submit" class="btn btn-success">Add Duplicate</button>
+            </form>
+        </div>
+
+        <form id="addBookForm" style="display: none;">
+            <div class="mb-3">
+                <label for="isbn" class="form-label">ISBN:</label>
+                <input type="text" id="isbn" class="form-control" name="isbn">
+            </div>
+            <div class="mb-3">
+                <label for="title" class="form-label">Title:</label>
+                <input type="text" id="title" class="form-control" name="title">
+            </div>
+            <div class="mb-3">
+                <label for="author" class="form-label">Author:</label>
+                <input type="text" id="author" class="form-control" name="author">
+            </div>
+            <div class="mb-3">
+                <label for="isbn" class="form-label">Publisher:</label>
+                <input type="text" id="publisher" class="form-control" name="isbn">
+            </div>
+            <div class="mb-3">
+                <label for="cupboardid" class="form-label">Destination Cupboard:</label>
+        <select id="cupboardid" class="form-control" name="destinationcupboard">
+            <option value="" selected>Select Cupboard</option>
+            <!-- Cupboard options will be populated dynamically -->
+        </select>
+    </div>
+    <div class="mb-3">
+        <label for="rowid" class="form-label">Destination Row:</label>
+        <select id="rowid" class="form-control" name="destinationrow">
+            <option value="" selected>Select Row</option>
+            <!-- Row options will be populated dynamically -->
+        </select>
+            </div>
+            <div class="mb-3">
+                <label for="author" class="form-label">Barcode:</label>
+
+                <button class="btn btn-primary" onclick="startScan(event)">Click here to scan barcode</button>
+
+
+                <input type="text" id="barcodee" class="form-control" name="author">
+            </div>
+            <button type="submit" class="btn btn-primary">Add Book</button>
+        </form>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.4.0-iv11082320/dist/dbr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-camera-enhancer@3.3.1/dist/dce.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mozilla/localForage@master/dist/localforage.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.4.0-iv11082320/dist/dbr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-camera-enhancer@3.3.1/dist/dce.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mozilla/localForage@master/dist/localforage.js"></script>
+    <script>
+    let reader;
+    let enhancer;
+    let interval;
+    let processing = false;
+
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("sw.js").then(function (registration) {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }, function (err) {
+            console.log('ServiceWorker registration failed: ', err);
+        }).catch(function (err) {
+            console.log(err);
+        });
+    }
+
+    window.onload = function() {
+        init();
+    };
+    let scanContext;
+    function startScan(event){
+        scanContext = event.target.closest('form').id;
+        event.preventDefault();
+        if (!enhancer || !reader) {
+            alert("Please wait for the initialization of Dynamsoft Barcode Reader");
+            return;
+        }
+        enhancer.open(true);
+    }
+
+    function stopScan(){
+        stopProcessingLoop();
+        enhancer.close(true);
+    }
+
+    async function init(){
+        reader = await Dynamsoft.DBR.BarcodeScanner.createInstance();
+        await useEAN13Template();
+        enhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance();
+        enhancer.on("played", (playCallbackInfo) => {
+            startProcessingLoop();
+        });
+        await enhancer.setUIElement(Dynamsoft.DCE.CameraEnhancer.defaultUIElementURL);
+        setScanRegion();
+        let container = document.getElementsByClassName("scanner")[0];
+        container.appendChild(enhancer.getUIElement());
+        document.getElementsByClassName("dce-btn-close")[0].onclick = function () {
+            stopScan();
+        };
+    }
+
+    function startProcessingLoop(isBarcode){
+        stopProcessingLoop();
+        interval = setInterval(captureAndDecode,100);
+    }
+
+    function stopProcessingLoop(){
+        if (interval) {
+            clearInterval(interval);
+            interval = undefined;
+        }
+        processing = false;
+    }
+
+    async function captureAndDecode() {
+        if (!enhancer || !reader) {
+            return
+        }
+        if (enhancer.isOpen() === false) {
+            return;
+        }
+        if (processing == true) {
+            return;
+        }
+        processing = true;
+        let frame = enhancer.getFrame();
+        if (frame) {
+            let results = await reader.decode(frame);
+            if (results.length > 0) {
+                const result = results[0];
+                if (scanContext === 'searchForm') {
+                    handleScannedText(result.barcodeText);
+                } else {
+                    handleScannedText1(result.barcodeText);
+                }
+                stopScan();
+            }
+            processing = false;
+        }
+    };
+
+    function setScanRegion(){
+        enhancer.setScanRegion({
+            regionLeft:0,
+            regionTop:25,
+            regionRight:100,
+            regionBottom:55,
+            regionMeasuredByPercentage: 1
+        });
+    }
+
+    async function useEAN13Template() {
+        await reader.initRuntimeSettingsWithString(`
+        {
+            "FormatSpecification": {
+                "EnableAddOnCode": 1,
+                "Name": "defaultFormatParameterForAllBarcodeFormat"
+            },
+            "ImageParameter": {
+                "BarcodeFormatIds": ["BF_CODE_128","BF_EAN_13"],
+                "BarcodeFormatIds_2": ["BF2_NULL"],
+                "ExpectedBarcodesCount": 1,
+                "FormatSpecificationNameArray": [
+                    "defaultFormatParameterForAllBarcodeFormat"
+                ],
+                "Name": "default",
+                "Timeout": 3000
+            },
+            "Version": "3.0"
+        }`);
+    }
+
+    function handleScannedText(scannedText) {
+        document.getElementById('query').value = scannedText;
+        searchBooks(scannedText);
+    }
+
+    function handleScannedText1(scannedText) {
+        document.getElementById('barcodee').value = scannedText;
+        document.getElementById('barcode').value = scannedText;
+        document.getElementById('duplicateBarcode').value = scannedText;
+    }
+
+    function searchBooks(query) {
+        fetch(`/search?query=${query}`)
+            .then(response => response.json())
+            .then(data => {
+                displayResults(data.books);
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function displayResults(books) {
+        const searchResultsDiv = document.getElementById("searchResults");
+        searchResultsDiv.innerHTML = "";
+        if (books.length > 0) {
+            const table = document.createElement("table");
+            table.classList.add("table", "table-striped");
+            const thead = document.createElement("thead");
+            thead.innerHTML = `
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>ISBN</th>
+                    <th>Barcode</th>
+                    <th>Status</th>
+                </tr>
+            `;
+            const tbody = document.createElement("tbody");
+            books.forEach((book, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${book.book_id}</td>
+                    <td>${book.title}</td>
+                    <td>${book.isbn}</td>
+                    <td>${book.barcode}</td>
+                    <td class="barcode-status">${book.barcode_status}</td>
+                `;
+
+                // Apply Bootstrap classes based on barcode_status
+                if (book.barcode_status.trim().toLowerCase() === 'assigned') {
+                    row.classList.add("table-success");
+                } else {
+                    row.classList.add("table-danger");
+                }
+
+                row.addEventListener("click", function() {
+                    displayBookDetails(book);
+                });
+                tbody.appendChild(row);
+            });
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            searchResultsDiv.appendChild(table);
+        } else {
+            searchResultsDiv.textContent = "No results found.";
+        }
+    }
+
+    function displayBookDetails(book) {
+        document.getElementById("bookTitle").textContent = book.title;
+        document.getElementById("bookISBN").textContent = book.isbn;
+        document.getElementById("bookAuthor").textContent = book.author;
+        document.getElementById("bookPublisher").textContent = book.publisher;
+        document.getElementById("Category").textContent = book.roww_category;
+        document.getElementById("bookCupboardID").textContent = book.cupboard_id + " " + book.cupname;
+        document.getElementById("bookRowNumber").textContent = book.row_number_inside_cupboard + " " + book.rowname;
+        document.getElementById("bookBarcode").textContent = book.barcode;
+        document.getElementById("bookID").value = book.book_id;
+        document.getElementById("bookDetails").style.display = "block";
+
+        const barcodeStatus = book.barcode_status;
+        if (barcodeStatus === 'assigned') {
+            const confirmation = confirm("Barcode is already assigned. Press OK to modify it or Cancel to add a duplicate?");
+            if (confirmation) {
+                document.getElementById("updateForm").style.display = "block";
+                document.getElementById("duplicateForm").style.display = "none";
+            } else {
+                document.getElementById("duplicateForm").style.display = "block";
+                document.getElementById("updateForm").style.display = "none";
+            }
+        } else {
+            document.getElementById("updateForm").style.display = "block";
+            document.getElementById("duplicateForm").style.display = "none";
+        }
+
+        // Select cupboard and row options in dropdown menus
+        document.getElementById("destinationcupboard").value = book.cupboard_id;
+    document.getElementById("destinationrow").value = book.destination_row;
+    }
+
+    document.getElementById("searchForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        const query = document.getElementById("query").value.trim();
+        if (query !== "") {
+            searchBooks(query);
+        }
+    });
+
+    document.getElementById("query").addEventListener("input", function() {
+        const query = this.value.trim();
+        if (query !== "") {
+            searchBooks(query);
+        } else {
+            const searchResultsDiv = document.getElementById("searchResults");
+            searchResultsDiv.innerHTML = "";
+        }
+    });
+
+    document.getElementById("addBookBtn").addEventListener("click", function() {
+        fetchCupboards(1);
+
+        document.getElementById("addBookForm").style.display = "block";
+    });
+
+    document.getElementById("addBookForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        const isbn = document.getElementById("isbn").value.trim();
+        const title = document.getElementById("title").value.trim();
+        const author = document.getElementById("author").value.trim();
+        const publisher = document.getElementById("publisher").value.trim();
+        const rowid = document.getElementById("rowid").value.trim();
+        const cupboardid = document.getElementById("cupboardid").value.trim();
+        const barcodee = document.getElementById("barcodee").value.trim();
+
+        fetch("/addbook", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                isbn: isbn,
+                title: title,
+                author: author,
+                publisher:publisher,
+                cupboardid:cupboardid,
+                rowid:rowid,
+                barcode:barcodee
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                alert(data.message);
+                document.getElementById("isbn").value = "";
+                document.getElementById("title").value = "";
+                document.getElementById("author").value = "";
+                document.getElementById("addBookForm").style.display = "none";
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+
+    document.getElementById("updateForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        const destinationCupboard = document.getElementById("destinationcupboard").value.trim();
+        const destinationRow = document.getElementById("destinationrow").value.trim();
+        const barcode = document.getElementById("barcode").value.trim();
+        const bookID = document.getElementById("bookID").value.trim();
+
+        fetch(`/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                bookID: bookID,
+                destinationcupboard: destinationCupboard,
+                destinationrow: destinationRow,
+                barcode: barcode
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                alert(data.message);
+                fetch(`/book/${bookID}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.book) {
+                            displayBookDetails(data.book);
+                            // Search again after updating
+                            searchBooks(document.getElementById("query").value.trim());
+                        } else {
+                            alert("Book details not found.");
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+
+    document.getElementById("duplicateForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        const duplicateBarcode = document.getElementById("duplicateBarcode").value.trim();
+        const bookID = document.getElementById("bookID").value.trim();
+
+        fetch(`/add_duplicate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                bookID: bookID,
+                barcode: duplicateBarcode
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                alert(data.message);
+                // Search again after adding duplicate
+                searchBooks(document.getElementById("query").value.trim());
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+
+    // Function to fetch row details based on cupboard ID
+
+
+
+// Function to fetch cupboards from the server
+
+
+// Function to fetch rows based on the selected cupboard ID
+function displayBookDetails(book) {
+    document.getElementById("bookTitle").textContent = book.title;
+    document.getElementById("bookISBN").textContent = book.isbn;
+    document.getElementById("bookAuthor").textContent = book.author;
+    document.getElementById("bookPublisher").textContent = book.publisher;
+    document.getElementById("Category").textContent = book.roww_category;
+    document.getElementById("bookCupboardID").textContent = book.cupboard_id + " " + book.cupname;
+    document.getElementById("bookRowNumber").textContent = book.row_number_inside_cupboard + " " + book.rowname;
+    document.getElementById("bookBarcode").textContent = book.barcode;
+    document.getElementById("bookID").value = book.book_id;
+    document.getElementById("bookDetails").style.display = "block";
+
+    const barcodeStatus = book.barcode_status;
+    if (barcodeStatus === 'assigned') {
+        const confirmation = confirm("Barcode is already assigned. Press OK to modify it or Cancel to add a duplicate?");
+        if (confirmation) {
+            document.getElementById("updateForm").style.display = "block";
+            document.getElementById("duplicateForm").style.display = "none";
+        } else {
+            document.getElementById("duplicateForm").style.display = "block";
+            document.getElementById("updateForm").style.display = "none";
+        }
+    } else {
+        document.getElementById("updateForm").style.display = "block";
+        document.getElementById("duplicateForm").style.display = "none";
+    }
+
+    // Select cupboard and row options in dropdown menus
+    fetchCupboards(book.cupboard_id);
+    document.getElementById("destinationcupboard").value = book.cupboard_id;
+    fetchRows(book.cupboard_id, book.row_number_inside_cupboard);
+}
+
+// Function to fetch rows based on the selected cupboard ID and select the row option
+function fetchRows(cupboardId, selectedRowId) {
+    fetch(`/rows?cupboardId=${cupboardId}`)
+        .then(response => response.json())
+        .then(data => {
+            const dropdown = document.getElementById("destinationrow");
+            const rowIdDropdown = document.getElementById("rowid");
+
+            if (dropdown && rowIdDropdown) {
+                dropdown.innerHTML = ""; // Clear previous options
+                rowIdDropdown.innerHTML = ""; // Clear previous options
+
+                data.forEach(row => {
+                    const option = new Option(row.name + ' - ' + row.id, row.id);
+                    const rowIdOption = new Option(row.name + ' - ' + row.id, row.id);
+
+                    if (row.id === selectedRowId) {
+                        option.selected = true; // Select the row option matching destination_row
+                        rowIdOption.selected = true; // Select the row option matching rowid
+                    }
+
+                    dropdown.appendChild(option);
+                    rowIdDropdown.appendChild(rowIdOption);
+                });
+            } else {
+                console.error('One or both dropdowns ("destinationrow" and "rowid") are not available.');
+            }
+        })
+        .catch(error => console.error('Error fetching rows:', error));
+}
+
+
+
+function init() {
+    // Fetch cupboards when the page loads
+
+
+    // Event listener for cupboard selection change
+    document.getElementById("destinationcupboard").addEventListener("change", function() {
+        const selectedCupboardId = this.value;
+        if (selectedCupboardId) {
+            // Fetch rows based on selected cupboard ID
+            fetchRows(selectedCupboardId);
+        } else {
+            // Clear row dropdown if no cupboard is selected
+            document.getElementById("destinationrow").innerHTML = "";
+        }
+    });
+
+    // Event listener for cupboardid selection change
+    document.getElementById("cupboardid").addEventListener("change", function() {
+        const selectedCupboardId = this.value;
+        if (selectedCupboardId) {
+            // Fetch rows based on selected cupboard ID
+            fetchRows(selectedCupboardId);
+        } else {
+            // Clear row dropdown if no cupboard is selected
+            document.getElementById("rowid").innerHTML = "";
+        }
+    });
+}
+init();
+// Function to initialize event listeners and fetch initial data
+function fetchCupboards(selectedRowId) {
+    fetch("/cupboards")
+        .then(response => response.json())
+        .then(data => {
+            // Iterate over each dropdown ID
+            ["destinationcupboard", "cupboardid"].forEach(dropdownId => {
+                const dropdown = document.getElementById(dropdownId);
+                dropdown.innerHTML = ""; // Clear previous options
+                data.forEach(cupboard => {
+                    const option = new Option(cupboard.name + ' - ' + cupboard.id, cupboard.id);
+                    if (cupboard.id === selectedRowId) {
+                        option.selected = true; // Select the row option matching destination_row
+                    }
+                    dropdown.appendChild(option);
+                });
+            });
+
+            // Trigger row request after fetching cupboards
+        })
+        .catch(error => console.error('Error fetching cupboards:', error));
+}
+
+
+
+</script>
+
+
+
+
+
+
+</body>
+</html>
