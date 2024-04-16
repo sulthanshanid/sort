@@ -385,115 +385,126 @@ td.not-assigned {
         document.getElementById("addBookForm").style.display = "block";
     });
 
-    document.getElementById("addBookForm").addEventListener("submit", function(event) {
-        event.preventDefault();
-        const isbn = document.getElementById("isbn").value.trim();
-        const title = document.getElementById("title").value.trim();
-        const author = document.getElementById("author").value.trim();
-        const publisher = document.getElementById("publisher").value.trim();
-        const rowid = document.getElementById("rowid").value.trim();
-        const cupboardid = document.getElementById("cupboardid").value.trim();
-        const barcodee = document.getElementById("barcodee").value.trim();
+    
+              
+       
 
-        fetch("/addbook", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                isbn: isbn,
-                title: title,
-                author: author,
-                publisher:publisher,
-                cupboardid:cupboardid,
-                rowid:rowid,
-                barcode:barcodee
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);
-            } else {
-                alert(data.message);
-                document.getElementById("isbn").value = "";
-                document.getElementById("title").value = "";
-                document.getElementById("author").value = "";
-                document.getElementById("addBookForm").style.display = "none";
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    });
+   document.getElementById("addBookForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+    const isbn = document.getElementById("isbn").value.trim();
+    const title = document.getElementById("title").value.trim();
+    const author = document.getElementById("author").value.trim();
+    const publisher = document.getElementById("publisher").value.trim();
+    const rowid = document.getElementById("rowid").value.trim();
+    const cupboardid = document.getElementById("cupboardid").value.trim();
+    const barcodee = document.getElementById("barcodee").value.trim();
 
-    document.getElementById("updateForm").addEventListener("submit", function(event) {
-        event.preventDefault();
-        const destinationCupboard = document.getElementById("destinationcupboard").value.trim();
-        const destinationRow = document.getElementById("destinationrow").value.trim();
-        const barcode = document.getElementById("barcode").value.trim();
-        const bookID = document.getElementById("bookID").value.trim();
+    fetch("/addbook", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            isbn: isbn,
+            title: title,
+            author: author,
+            publisher: publisher,
+            cupboardid: cupboardid,
+            rowid: rowid,
+            barcode: barcodee
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else {
+            alert(data.message);
+            // Clear input fields
+            document.getElementById("isbn").value = "";
+            document.getElementById("title").value = "";
+            document.getElementById("author").value = "";
+            document.getElementById("publisher").value = "";
+            document.getElementById("barcodee").value = ""; // Clear barcode field
+            // Auto-fill barcode field
+            const prevBarcode = parseInt(barcodee);
+            const newBarcode = isNaN(prevBarcode) ? 1001 : prevBarcode + 1;
+            document.getElementById("barcodee").value = newBarcode;
+            // Hide addBookForm
+            document.getElementById("addBookForm").style.display = "none";
+        }
+    })
+    .catch(error => console.error('Error:', error));
+});
 
-        fetch(`/update`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                bookID: bookID,
-                destinationcupboard: destinationCupboard,
-                destinationrow: destinationRow,
-                barcode: barcode
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);
-            } else {
-                alert(data.message);
-                fetch(`/book/${bookID}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.book) {
-                            displayBookDetails(data.book);
-                            // Search again after updating
-                            searchBooks(document.getElementById("query").value.trim());
-                        } else {
-                            alert("Book details not found.");
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    });
+document.getElementById("updateForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+    const destinationCupboard = document.getElementById("destinationcupboard").value.trim();
+    const destinationRow = document.getElementById("destinationrow").value.trim();
+    const barcode = document.getElementById("barcode").value.trim();
+    const bookID = document.getElementById("bookID").value.trim();
 
-    document.getElementById("duplicateForm").addEventListener("submit", function(event) {
-        event.preventDefault();
-        const duplicateBarcode = document.getElementById("duplicateBarcode").value.trim();
-        const bookID = document.getElementById("bookID").value.trim();
+    fetch(`/update`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            bookID: bookID,
+            destinationcupboard: destinationCupboard,
+            destinationrow: destinationRow,
+            barcode: barcode
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else {
+            alert(data.message);
+            // Clear input fields
+            document.getElementById("barcode").value = "";
+            // Auto-fill barcode field
+            const prevBarcode = parseInt(barcode);
+            const newBarcode = isNaN(prevBarcode) ? 1001 : prevBarcode + 1;
+            document.getElementById("barcode").value = newBarcode;
+            // Hide updateForm
+            document.getElementById("updateForm").style.display = "none";
+        }
+    })
+    .catch(error => console.error('Error:', error));
+});
 
-        fetch(`/add_duplicate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                bookID: bookID,
-                barcode: duplicateBarcode
-            })
+document.getElementById("duplicateForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+    const duplicateBarcode = document.getElementById("duplicateBarcode").value.trim();
+    const bookID = document.getElementById("bookID").value.trim();
+
+    fetch(`/add_duplicate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            bookID: bookID,
+            barcode: duplicateBarcode
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);
-            } else {
-                alert(data.message);
-                // Search again after adding duplicate
-                searchBooks(document.getElementById("query").value.trim());
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    });
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else {
+            alert(data.message);
+            // Clear input fields
+            document.getElementById("duplicateBarcode").value = "";
+            // Hide duplicateForm
+            document.getElementById("duplicateForm").style.display = "none";
+        }
+    })
+    .catch(error => console.error('Error:', error));
+});
+
 
     // Function to fetch row details based on cupboard ID
 
