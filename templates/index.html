@@ -366,6 +366,7 @@ td.not-assigned {
         const query = document.getElementById("query").value.trim();
         if (query !== "") {
             searchBooks(query);
+            displayBookDetails(book);
         }
     });
 
@@ -373,6 +374,7 @@ td.not-assigned {
         const query = this.value.trim();
         if (query !== "") {
             searchBooks(query);
+            displayBookDetails(book);
         } else {
             const searchResultsDiv = document.getElementById("searchResults");
             searchResultsDiv.innerHTML = "";
@@ -432,6 +434,8 @@ td.not-assigned {
             document.getElementById("barcodee").value = newBarcode;
             // Hide addBookForm
             document.getElementById("addBookForm").style.display = "none";
+            searchBooks(query);
+            displayBookDetails(book);
         }
     })
     .catch(error => console.error('Error:', error));
@@ -470,6 +474,8 @@ document.getElementById("updateForm").addEventListener("submit", function(event)
             document.getElementById("barcode").value = newBarcode;
             // Hide updateForm
             document.getElementById("updateForm").style.display = "none";
+            searchBooks(query);
+            displayBookDetails(book);
         }
     })
     .catch(error => console.error('Error:', error));
@@ -500,6 +506,8 @@ document.getElementById("duplicateForm").addEventListener("submit", function(eve
             document.getElementById("duplicateBarcode").value = "";
             // Hide duplicateForm
             document.getElementById("duplicateForm").style.display = "none";
+            searchBooks(query);
+            displayBookDetails(book);
         }
     })
     .catch(error => console.error('Error:', error));
