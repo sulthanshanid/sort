@@ -365,7 +365,7 @@ td.not-assigned {
         event.preventDefault();
         const query = document.getElementById("query").value.trim();
         if (query !== "") {
-            searchBooks(query);
+            
             displayBookDetails(book);
         }
     });
@@ -374,7 +374,7 @@ td.not-assigned {
         const query = this.value.trim();
         if (query !== "") {
             searchBooks(query);
-            displayBookDetails(book);
+            
         } else {
             const searchResultsDiv = document.getElementById("searchResults");
             searchResultsDiv.innerHTML = "";
@@ -470,7 +470,7 @@ document.getElementById("updateForm").addEventListener("submit", function(event)
             document.getElementById("barcode").value = "";
             // Auto-fill barcode field
             const prevBarcode = parseInt(barcode);
-            const newBarcode = isNaN(prevBarcode) ? 1001 : prevBarcode + 1;
+            const newBarcode = isNaN(prevBarcode) ? barcode : prevBarcode + 1;
             document.getElementById("barcode").value = newBarcode;
             // Hide updateForm
             document.getElementById("updateForm").style.display = "none";
@@ -504,6 +504,11 @@ document.getElementById("duplicateForm").addEventListener("submit", function(eve
             alert(data.message);
             // Clear input fields
             document.getElementById("duplicateBarcode").value = "";
+            
+            // Auto-fill barcode field
+            const prevBarcode = parseInt(barcode);
+            const newBarcode = isNaN(prevBarcode) ? barcode : prevBarcode + 1;
+            document.getElementById("duplicateBarcode").value = newBarcode;
             // Hide duplicateForm
             document.getElementById("duplicateForm").style.display = "none";
             searchBooks(query);
