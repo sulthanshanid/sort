@@ -383,13 +383,16 @@ td.not-assigned {
 
    let barcodeCounter = localStorage.getItem('barcodeCounter') || ""; // Initialize the barcode counter with previous value or blank
 
+// Initialize the barcode counter with previous value or blank
+let barcodeCounter = localStorage.getItem('barcodeCounter');
+
 function handleScannedText1(scannedText) {
     document.getElementById('barcodee').value = scannedText;
     document.getElementById('barcode').value = scannedText;
     document.getElementById('duplicateBarcode').value = scannedText;
 
     // Increment the barcode counter after setting the barcode value
-    barcodeCounter++;
+    barcodeCounter = barcodeCounter ? parseInt(barcodeCounter) + 1 : parseInt(scannedText);
 }
 
 document.getElementById("addBookForm").addEventListener("submit", function(event) {
@@ -400,7 +403,7 @@ document.getElementById("addBookForm").addEventListener("submit", function(event
     const publisher = document.getElementById("publisher").value.trim();
     const rowid = document.getElementById("rowid").value.trim();
     const cupboardid = document.getElementById("cupboardid").value.trim();
-    const barcodee = barcodeCounter === "" ? "" : barcodeCounter.toString(); // Use the barcode counter value if not blank
+    const barcodee = barcodeCounter ? barcodeCounter : "";
 
     fetch("/addbook", {
         method: 'POST',
@@ -430,13 +433,50 @@ document.getElementById("addBookForm").addEventListener("submit", function(event
             document.getElementById("publisher").value = "";
             document.getElementById("barcodee").value = ""; // Clear barcode field
             // Auto-fill barcode field with the next value if not blank
-            if (barcodeCounter !== "") {
+            if (barcodeCounter) {
                 document.getElementById("barcodee").value = barcodeCounter;
                 // Increment the barcode counter for the next book
                 barcodeCounter++;
             }
             // Hide addBookForm
             document.getElementById("addBookForm").style.display = "none";
+            searchBooks(query);
+            displayBookDetails(book);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+});
+
+document.getElementById("duplicateForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+    const duplicateBarcode = document.getElementById("duplicateBarcode").value.trim();
+
+    fetch(`/add_duplicate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            bookID: bookID,
+            barcode: duplicateBarcode
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else {
+            alert(data.message);
+            // Clear input fields
+            document.getElementById("duplicateBarcode").value = "";
+            // Auto-fill barcode field with the next value if not blank
+            if (barcodeCounter) {
+                document.getElementById("duplicateBarcode").value = barcodeCounter;
+                // Increment the barcode counter for the next book
+                barcodeCounter++;
+            }
+            // Hide duplicateForm
+            document.getElementById("duplicateForm").style.display = "none";
             searchBooks(query);
             displayBookDetails(book);
         }
@@ -472,7 +512,7 @@ document.getElementById("updateForm").addEventListener("submit", function(event)
             // Clear input fields
             document.getElementById("barcode").value = "";
             // Auto-fill barcode field with the next value if not blank
-            if (barcodeCounter !== "") {
+            if (barcodeCounter) {
                 document.getElementById("barcode").value = barcodeCounter;
                 // Increment the barcode counter for the next book
                 barcodeCounter++;
@@ -486,46 +526,9 @@ document.getElementById("updateForm").addEventListener("submit", function(event)
     .catch(error => console.error('Error:', error));
 });
 
-document.getElementById("duplicateForm").addEventListener("submit", function(event) {
-    event.preventDefault();
-    const duplicateBarcode = document.getElementById("duplicateBarcode").value.trim();
-    const bookID = document.getElementById("bookID").value.trim();
-
-    fetch(`/add_duplicate`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            bookID: bookID,
-            barcode: duplicateBarcode
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            alert(data.error);
-        } else {
-            alert(data.message);
-            // Clear input fields
-            document.getElementById("duplicateBarcode").value = "";
-            // Auto-fill barcode field with the next value if not blank
-            if (barcodeCounter !== "") {
-                document.getElementById("duplicateBarcode").value = barcodeCounter;
-                // Increment the barcode counter for the next book
-                barcodeCounter++;
-            }
-            // Hide duplicateForm
-            document.getElementById("duplicateForm").style.display = "none";
-            searchBooks(query);
-            displayBookDetails(book);
-        }
-    })
-    .catch(error => console.error('Error:', error));
-});
-
 // Save the barcodeCounter value in localStorage
 localStorage.setItem('barcodeCounter', barcodeCounter);
+
 
 
 
