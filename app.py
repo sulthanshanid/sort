@@ -12,7 +12,9 @@ app.config['MYSQL_DB'] = 'freedb_library'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
-
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html')
 @app.route('/cupboards', methods=['GET'])
 def fetch_cupboards():
     try:
