@@ -3,3 +3,4 @@ requests
 gunicorn
 gevent 
 pymysql
+flask_mysqldb
