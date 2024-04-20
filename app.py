@@ -1,123 +1,43 @@
 import pymysql
 from flask import Flask, request, jsonify, render_template
+from flask_mysqldb import MySQL
 
 app = Flask(__name__)
 
-HOST = 'sql.freedb.tech'
-PORT = 3306
-DATABASE = 'freedb_library'
-USER = 'freedb_muzu04994'
-PASSWORD = 'Q72Hjf&CQ8!rtkA'
+app.config['MYSQL_HOST'] = 'sql.freedb.tech'
+app.config['MYSQL_PORT'] = 3306
+app.config['MYSQL_USER'] = 'freedb_muzu04994'
+app.config['MYSQL_PASSWORD'] = 'Q72Hjf&CQ8!rtkA'
+app.config['MYSQL_DB'] = 'freedb_library'
+app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
-def connect_to_database():
-    return pymysql.connect(host=HOST, port=PORT, user=USER, password=PASSWORD, database=DATABASE, cursorclass=pymysql.cursors.DictCursor)
-def get_cupboards():
-    connection = connect_to_database()
-    try:
-        with connection.cursor() as cursor:
-            sql = "SELECT id, name FROM cupboard"
-            cursor.execute(sql)
-            result = cursor.fetchall()
-    finally:
-        connection.close()
-    return result
-
-# Fetch rows for a given cupboard from database
-def get_rows(cupboard_id):
-    connection = connect_to_database()
-    try:
-        with connection.cursor() as cursor:
-            sql = "SELECT row_number_inside_cupboard as id, category as name FROM roww WHERE cupboard_id = %s"
-            cursor.execute(sql, (cupboard_id,))
-            result = cursor.fetchall()
-    finally:
-        connection.close()
-    return result
+mysql = MySQL(app)
 
 @app.route('/cupboards', methods=['GET'])
 def fetch_cupboards():
-    cupboards = get_cupboards()
-    return jsonify(cupboards)
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT id, name FROM cupboard")
+        cupboards = cursor.fetchall()
+        cursor.close()
+        return jsonify(cupboards)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/rows', methods=['GET'])
 def fetch_rows():
     cupboard_id = request.args.get('cupboardId')
-    if cupboard_id:
-        rows = get_rows(cupboard_id)
-        return jsonify(rows)
-    else:
+    if not cupboard_id:
         return jsonify([])
-@app.route('/', methods=['GET'])
-def index():
-    return render_template('index.html')
 
-@app.route('/book/<int:book_id>', methods=['GET'])
-def get_book(book_id):
-    # Connect to the database
-    connection = connect_to_database()
     try:
-        with connection.cursor() as cursor:
-            # Fetch book details by ID
-            sql = '''SELECT 
-    books.*, 
-    roww.row_number_inside_cupboard, 
-    roww.category AS rowname, 
-    cupboard.name AS cupname 
-FROM 
-    books 
-JOIN 
-    roww ON books.destination_row = roww.id 
-JOIN 
-    cupboard ON books.cupboard_id = cupboard.id 
-WHERE 
-    books.book_id = %s;
-'''
-            cursor.execute(sql, (book_id,))
-            book = cursor.fetchone()
-            return jsonify({'book': book}), 200 if book else 404
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT row_number_inside_cupboard as id, category as name FROM roww WHERE cupboard_id = %s", (cupboard_id,))
+        rows = cursor.fetchall()
+        cursor.close()
+        return jsonify(rows)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        connection.close()
-
-@app.route('/search', methods=['GET'])
-def search_books():
-    query = request.args.get('query')
-    connection = connect_to_database()
-    try:
-        with connection.cursor() as cursor:
-            sql_query = """
-                SELECT 
-    books.*, 
-    roww.category AS roww_category,
-    roww.row_number_inside_cupboard,
-    cupboard.id AS cupboard_id,
-    cupboard.name AS cupname,
-    roww.category AS rowname,
-    CASE
-        WHEN books.barcode IS NOT NULL THEN 'assigned'
-        ELSE 'not_assigned'
-    END AS barcode_status
-FROM 
-    books
-LEFT JOIN 
-    roww ON books.destination_row = roww.id
-LEFT JOIN 
-    cupboard ON roww.cupboard_id = cupboard.id
-WHERE 
-    books.isbn LIKE %s 
-    OR books.title LIKE %s 
-    OR books.barcode LIKE %s 
-ORDER BY 
-    books.title;
-"""
-            cursor.execute(sql_query, ('%' + query + '%', '%' + query + '%', '%' + query + '%'))
-            books = cursor.fetchall()
-            return jsonify({'books': books}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    finally:
-        connection.close()
 
 @app.route('/addbook', methods=['POST'])
 def add_book():
@@ -125,55 +45,86 @@ def add_book():
     isbn = data.get('isbn')
     title = data.get('title')
     author = data.get('author')
-    publisher =data.get('publisher')
+    publisher = data.get('publisher')
     rowid = int(data.get('rowid'))  # Assuming rowid is an integer
     cupboardid = int(data.get('cupboardid'))  # Assuming cupboardid is an integer
-    barcode=data.get('barcode')
-    if not ( title and cupboardid and rowid):
+    barcode = data.get('barcode')
+    if not (title and cupboardid and rowid):
         return jsonify({'error': 'Incomplete data provided'}), 400
 
-    connection = connect_to_database()
-
     try:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM books WHERE barcode = %s ", (barcode))
-            existing_book = cursor.fetchone()
-            if existing_book:
-                return jsonify({
-                    'error': 'Barcode already exists for another book. Consider editing the existing book or choose a different barcode.'}), 400
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT * FROM books WHERE barcode = %s", (barcode,))
+        existing_book = cursor.fetchone()
+        if existing_book:
+            cursor.close()
+            return jsonify({'error': 'Barcode already exists for another book. Consider editing the existing book or choose a different barcode.'}), 400
 
-            # Insert new book into the database
-            sql = '''INSERT INTO books (
-    isbn, 
-    title, 
-    author, 
-    publisher, 
-    destination_row, 
-    cupboard_id, 
-    added_manually, 
-    copies_available, 
-    barcode
-) 
-VALUES (
-    %s,                          -- Placeholder 1 (isbn)
-    %s,                          -- Placeholder 2 (title)
-    %s,                          -- Placeholder 3 (author)
-    %s,                          -- Placeholder 4 (publisher)
-    (SELECT id FROM roww WHERE row_number_inside_cupboard = %s AND cupboard_id = %s),  -- Subquery as Placeholder 5 and 6
-    %s,
-    1,                           -- Static value 1 (added_manually)
-    1,                           -- Static value 1 (copies_available)
-    %s                           -- Placeholder 7 (barcode)
-)
-'''
-            cursor.execute(sql, (isbn, title, author, publisher, rowid,cupboardid, cupboardid, barcode))
-            connection.commit()
-            return jsonify({'message': ' book added successfully'}), 200
-    except pymysql.Error as e:
-            print(f"Error code {e.args[0]}: {e}")
-            return jsonify({'error': str(e)}), 500
-    finally:
-        connection.close()
+        cursor.execute("INSERT INTO books (isbn, title, author, publisher, destination_row, cupboard_id, added_manually, copies_available, barcode) VALUES (%s, %s, %s, %s, %s, %s, 1, 1, %s)", (isbn, title, author, publisher, rowid, cupboardid, barcode))
+        mysql.connection.commit()
+        cursor.close()
+        return jsonify({'message': 'Book added successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/book/<int:book_id>', methods=['GET'])
+def get_book(book_id):
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('''SELECT 
+                                books.*, 
+                                roww.row_number_inside_cupboard, 
+                                roww.category AS rowname, 
+                                cupboard.name AS cupname 
+                            FROM 
+                                books 
+                            JOIN 
+                                roww ON books.destination_row = roww.id 
+                            JOIN 
+                                cupboard ON books.cupboard_id = cupboard.id 
+                            WHERE 
+                                books.book_id = %s;''', (book_id,))
+        book = cursor.fetchone()
+        cursor.close()
+        return jsonify({'book': book}), 200 if book else 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/search', methods=['GET'])
+def search_books():
+    query = request.args.get('query')
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("""
+                        SELECT 
+                            books.*, 
+                            roww.category AS roww_category,
+                            roww.row_number_inside_cupboard,
+                            cupboard.id AS cupboard_id,
+                            cupboard.name AS cupname,
+                            roww.category AS rowname,
+                            CASE
+                                WHEN books.barcode IS NOT NULL THEN 'assigned'
+                                ELSE 'not_assigned'
+                            END AS barcode_status
+                        FROM 
+                            books
+                        LEFT JOIN 
+                            roww ON books.destination_row = roww.id
+                        LEFT JOIN 
+                            cupboard ON roww.cupboard_id = cupboard.id
+                        WHERE 
+                            books.isbn LIKE %s 
+                            OR books.title LIKE %s 
+                            OR books.barcode LIKE %s 
+                        ORDER BY 
+                            books.title;
+                        """, ('%' + query + '%', '%' + query + '%', '%' + query + '%'))
+        books = cursor.fetchall()
+        cursor.close()
+        return jsonify({'books': books}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/add_duplicate', methods=['POST'])
 def add_duplicate_book():
@@ -184,40 +135,33 @@ def add_duplicate_book():
     if not (book_id and barcode):
         return jsonify({'error': 'Incomplete data provided'}), 400
 
-    connection = connect_to_database()
     try:
-        with connection.cursor() as cursor:
-            # Fetch the book details
-            cursor.execute("SELECT * FROM books WHERE book_id = %s", (book_id,))
-            book = cursor.fetchone()
-            if not book:
-                return jsonify({'error': 'Book not found'}), 404
-            book_title = book['title']
-            print("Book Title:", book_title)
-            # Insert a duplicate of the book with a new barcode
-            cursor.execute("SELECT * FROM books WHERE barcode = %s ", (barcode))
-            existing_book = cursor.fetchone()
-            if existing_book:
-                return jsonify({
-                                   'error': 'Barcode already exists for another book. Consider editing the existing book or choose a different barcode.'}), 400
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT * FROM books WHERE book_id = %s", (book_id,))
+        book = cursor.fetchone()
+        if not book:
+            cursor.close()
+            return jsonify({'error': 'Book not found'}), 404
+        book_title = book['title']
 
-            cursor.execute("""
-                INSERT INTO books (isbn, title, author, publisher, added_manually, cupboard_id, destination_row, category_name, copies_available, barcode)
-                SELECT isbn, title, author, publisher, added_manually, cupboard_id, destination_row, category_name, copies_available, %s
-                FROM books
-                WHERE book_id = %s
-            """, (barcode, book_id))
-            cursor.execute("""
-                            UPDATE books set copies_available=copies_available+1 where title=%s
-                        """, (book_title))
-            connection.commit()
-            return jsonify({'message': 'Duplicate book added successfully'}), 200
-    except pymysql.Error as e:
-            print(f"Error code {e.args[0]}: {e}")
-            return jsonify({'error': str(e)}), 500
+        cursor.execute("SELECT * FROM books WHERE barcode = %s", (barcode,))
+        existing_book = cursor.fetchone()
+        if existing_book:
+            cursor.close()
+            return jsonify({'error': 'Barcode already exists for another book. Consider editing the existing book or choose a different barcode.'}), 400
 
-    finally:
-        connection.close()
+        cursor.execute("""
+                        INSERT INTO books (isbn, title, author, publisher, added_manually, cupboard_id, destination_row, category_name, copies_available, barcode)
+                        SELECT isbn, title, author, publisher, added_manually, cupboard_id, destination_row, category_name, copies_available, %s
+                        FROM books
+                        WHERE book_id = %s
+                        """, (barcode, book_id))
+        cursor.execute("UPDATE books set copies_available=copies_available+1 where title=%s", (book_title,))
+        mysql.connection.commit()
+        cursor.close()
+        return jsonify({'message': 'Duplicate book added successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/update', methods=['POST'])
 def update_book():
@@ -230,28 +174,19 @@ def update_book():
     if not (book_id and destinationcupboard and destinationrow and barcode):
         return jsonify({'error': 'Incomplete data provided'}), 400
 
-    connection = connect_to_database()
     try:
-        with connection.cursor() as cursor:
-            # Check if barcode already exists
-            cursor.execute("SELECT * FROM books WHERE barcode = %s AND book_id != %s", (barcode, book_id))
-            existing_book = cursor.fetchone()
-            if existing_book:
-                return jsonify({'error': 'Barcode already exists for another book. Consider editing the existing book or choose a different barcode.'}), 400
-            sql = """
-               UPDATE books
-                SET cupboard_id = %s, 
-                    destination_row = (SELECT id from roww where row_number_inside_cupboard = %s and cupboard_id = %s), 
-                    barcode = %s
-                WHERE book_id = %s
-            """
-            cursor.execute(sql, (destinationcupboard, destinationrow, destinationcupboard, barcode, book_id))
-            connection.commit()
-            return jsonify({'message': 'Book updated successfully'}), 200
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT * FROM books WHERE barcode = %s AND book_id != %s", (barcode, book_id))
+        existing_book = cursor.fetchone()
+        if existing_book:
+            cursor.close()
+            return jsonify({'error': 'Barcode already exists for another book. Consider editing the existing book or choose a different barcode.'}), 400
+        cursor.execute("UPDATE books SET cupboard_id = %s, destination_row = (SELECT id from roww where row_number_inside_cupboard = %s and cupboard_id = %s), barcode = %s WHERE book_id = %s", (destinationcupboard, destinationrow, destinationcupboard, barcode, book_id))
+        mysql.connection.commit()
+        cursor.close()
+        return jsonify({'message': 'Book updated successfully'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        connection.close()
 
 if __name__ == '__main__':
     app.run(debug=True)
