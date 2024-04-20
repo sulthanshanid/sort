@@ -2,6 +2,9 @@ FROM python:3.9-slim-buster
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y python3-dev default-libmysqlclient-dev build-essential
+RUN apt-get install -y pkg-config
+
+
 
 WORKDIR /app
 
