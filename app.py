@@ -10,6 +10,8 @@ app.config['MYSQL_USER'] = 'freedb_muzu04994'
 app.config['MYSQL_PASSWORD'] = 'Q72Hjf&CQ8!rtkA'
 app.config['MYSQL_DB'] = 'freedb_library'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
+app.config['AUTH_PLUGIN']='mysql_native_password'
+        
 
 mysql = MySQL(app)
 @app.route('/', methods=['GET'])
