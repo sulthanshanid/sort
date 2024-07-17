@@ -6,8 +6,8 @@ app = Flask(__name__)
 
 app.config['MYSQL_HOST'] = 'sql.freedb.tech'
 app.config['MYSQL_PORT'] = 3306
-app.config['MYSQL_USER'] = 'freedb_muzu04994'
-app.config['MYSQL_PASSWORD'] = 'Q72Hjf&CQ8!rtkA'
+app.config['MYSQL_USER'] = 'reacted'
+app.config['MYSQL_PASSWORD'] = 'reacted'
 app.config['MYSQL_DB'] = 'freedb_library'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
